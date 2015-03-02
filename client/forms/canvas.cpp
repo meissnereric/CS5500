@@ -1,13 +1,15 @@
 // Example application modified from the wxWidgets demo here:
 // http://fossies.org/dox/wxWidgets-3.0.2/cube_8cpp_source.html
 
+#include "logger.h"
+#include "canvas.h"
+#include "main.h"
+
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
 #include <GL/glut.h>
 #endif
-#include "canvas.h"
-#include "main.h"
 
 // control ids
 enum
@@ -221,16 +223,16 @@ void TestGLContext::DrawRotatedCube(
 // TestGLCanvas
 // ----------------------------------------------------------------------------
 
-wxBEGIN_EVENT_TABLE(TestGLCanvas, wxGLCanvas) EVT_PAINT(TestGLCanvas::OnPaint)
+BEGIN_EVENT_TABLE(TestGLCanvas, wxGLCanvas) EVT_PAINT(TestGLCanvas::OnPaint)
   EVT_KEY_DOWN(TestGLCanvas::OnKeyDown)
-  EVT_TIMER(SpinTimer, TestGLCanvas::OnSpinTimer) wxEND_EVENT_TABLE()
+  EVT_TIMER(SpinTimer, TestGLCanvas::OnSpinTimer) END_EVENT_TABLE()
 
-  TestGLCanvas::TestGLCanvas(wxWindow* parent, int* attribList)
+  TestGLCanvas::TestGLCanvas(wxWindow* parent, wxSize size, int* attribList)
   : wxGLCanvas(parent,
                wxID_ANY,
                attribList,
                wxDefaultPosition,
-               wxDefaultSize,
+               size,
                wxFULL_REPAINT_ON_RESIZE)
   , m_xangle(30.0)
   , m_yangle(30.0)
@@ -240,7 +242,7 @@ wxBEGIN_EVENT_TABLE(TestGLCanvas, wxGLCanvas) EVT_PAINT(TestGLCanvas::OnPaint)
 
 // Needed to use wxGetApp(). Usually you get the same result
 // by using wxIMPLEMENT_APP(), but that can only be in main.
-wxDECLARE_APP(MyApp);
+DECLARE_APP(MyApp);
 
 void TestGLCanvas::OnPaint(wxPaintEvent& WXUNUSED(event))
 {
@@ -252,6 +254,8 @@ void TestGLCanvas::OnPaint(wxPaintEvent& WXUNUSED(event))
   // be followed by a paint event that updates the entire canvas with new
   // viewport settings.
   Resize();
+
+  LOG(DEBUG) << "painting";
 
   // Clear screen.
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -279,6 +283,7 @@ void TestGLCanvas::Spin(float xSpin, float ySpin)
 
 void TestGLCanvas::OnKeyDown(wxKeyEvent& event)
 {
+  LOG(DEBUG) << "TestGLCanvas::" << __FUNCTION__;
   float angle = 5.0;
 
   switch (event.GetKeyCode())
@@ -315,19 +320,4 @@ void TestGLCanvas::OnKeyDown(wxKeyEvent& event)
 void TestGLCanvas::OnSpinTimer(wxTimerEvent& WXUNUSED(event))
 {
   Spin(0.0, 4.0);
-}
-
-wxString glGetwxString(GLenum name)
-{
-  const GLubyte* v = glGetString(name);
-  if (v == nullptr)
-  {
-    // The error is not important. It is GL_INVALID_ENUM.
-    // We just want to clear the error stack.
-    glGetError();
-
-    return wxString();
-  }
-
-  return wxString((const char*)v);
 }

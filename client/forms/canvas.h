@@ -1,12 +1,12 @@
 #ifndef _CANVAS_HEADER_
 #define _CANVAS_HEADER_
-#include <wxwidget.h>
+#include "wxwidget.h"
 #include <wx/glcanvas.h>
 
 class TestGLCanvas : public wxGLCanvas
 {
 public:
-  TestGLCanvas(wxWindow* parent, int* attribList = NULL);
+  TestGLCanvas(wxWindow* parent, wxSize size, int* attribList = NULL);
 
 private:
   void OnPaint(wxPaintEvent& event);
@@ -20,7 +20,7 @@ private:
 
   wxTimer m_spinTimer;
 
-  wxDECLARE_EVENT_TABLE();
+  DECLARE_EVENT_TABLE();
 };
 
 // the rendering context used by all GL canvases

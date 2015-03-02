@@ -5,11 +5,12 @@ bool MyApp::OnInit()
 {
   if (!wxApp::OnInit()) return false;
 
-  init_log(argc, argv);
+  init_log();
   LOG(INFO) << "Initializing";
 
-  frame = new MainWindow("Hello World", wxPoint(50, 50), wxSize(300, 400));
-  manager = new ChunkManager();
+  frame.reset(
+    new MainWindow(wxT("Hello World"), wxPoint(50, 50), wxSize(300, 400)));
+  manager.reset(new ChunkManager());
 
   return true;
 }
@@ -17,8 +18,6 @@ bool MyApp::OnInit()
 int MyApp::OnExit()
 {
   delete m_glContext;
-  delete frame;
-  delete manager;
   return wxApp::OnExit();
 }
 
@@ -38,4 +37,4 @@ TestGLContext& MyApp::GetContext(wxGLCanvas* canvas)
   return *glContext;
 }
 
-wxIMPLEMENT_APP(MyApp);
+IMPLEMENT_APP(MyApp);
