@@ -1,314 +1,180 @@
 // Example application modified from the wxWidgets demo here:
 // http://fossies.org/dox/wxWidgets-3.0.2/cube_8cpp_source.html
-
 #include "logger.h"
 #include "canvas.h"
-#include "main.h"
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
+#include <glm/gtc/noise.hpp>
 
 // control ids
 enum
 {
-  SpinTimer = wxID_HIGHEST + 1
+  GameTimer = wxID_HIGHEST + 1
 };
 
-// ----------------------------------------------------------------------------
-// helper functions
-// ----------------------------------------------------------------------------
+BEGIN_EVENT_TABLE(GameLoopCanvas, wxGLCanvas)
+EVT_PAINT(GameLoopCanvas::OnPaint) EVT_KEY_DOWN(GameLoopCanvas::OnKeyDown)
+  EVT_KEY_UP(GameLoopCanvas::OnKeyUp)
+  EVT_TIMER(GameTimer, GameLoopCanvas::OnGameTimer)
+  EVT_MOTION(GameLoopCanvas::OnMouseUpdate) END_EVENT_TABLE()
 
-static void CheckGLError()
-{
-  GLenum errLast = GL_NO_ERROR;
-
-  while (true)
-  {
-    GLenum err = glGetError();
-    if (err == GL_NO_ERROR) return;
-
-    // normally the error is reset by the call to glGetError() but if
-    // glGetError() itself returns an error, we risk looping forever here
-    // so check that we get a different error than the last time
-    if (err == errLast)
-    {
-      wxLogError(wxT("OpenGL error state couldn't be reset."));
-      return;
-    }
-
-    errLast = err;
-
-    wxLogError(wxT("OpenGL error %d"), err);
-  }
-}
-
-static void initRendering()
-{
-  // set up the parameters we want to use
-  glEnable(GL_CULL_FACE);
-  glEnable(GL_DEPTH_TEST);
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
-  glEnable(GL_TEXTURE_2D);
-}
-
-// function to draw the texture for cube faces
-static wxImage DrawDice(int size, unsigned num)
-{
-  (void)num;
-  wxASSERT_MSG(num >= 1 && num <= 6, wxT("invalid dice index"));
-
-  wxBitmap bmp(size, size);
-  wxMemoryDC dc;
-  dc.SelectObject(bmp);
-  dc.SetBackground(*wxWHITE_BRUSH);
-  dc.Clear();
-  dc.SetBrush(*wxCYAN_BRUSH);
-  dc.DrawRectangle(wxRect(0, 0, size / 2, size / 2));
-
-  dc.SelectObject(wxNullBitmap);
-
-  return bmp.ConvertToImage();
-}
-
-// ----------------------------------------------------------------------------
-// TestGLContext
-// ----------------------------------------------------------------------------
-
-TestGLContext::TestGLContext(wxGLCanvas* canvas) : wxGLContext(canvas)
-{
-  SetCurrent(*canvas);
-  initRendering();
-
-  // add slightly more light, the default lighting is rather dark
-  GLfloat ambient[] = {0.5, 0.5, 0.5, 0.5};
-  glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
-
-  // set viewing projection
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity(); // Reset the camera.
-  glFrustum(-0.5f, 0.5f, -0.5f, 0.5f, 1.0f, 3.0f);
-
-  // create the textures to use for cube sides: they will be reused by all
-  // canvases (which is probably not critical in the case of simple textures
-  // we use here but could be really important for a real application where
-  // each texture could take many megabytes)
-  glGenTextures(WXSIZEOF(m_textures), m_textures);
-
-  for (unsigned i = 0; i < WXSIZEOF(m_textures); i++)
-  {
-    glBindTexture(GL_TEXTURE_2D, m_textures[i]);
-
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    const wxImage img(DrawDice(256, i + 1));
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glTexImage2D(GL_TEXTURE_2D,
-                 0,
-                 GL_RGBA,
-                 img.GetWidth(),
-                 img.GetHeight(),
-                 0,
-                 GL_RGB,
-                 GL_UNSIGNED_BYTE,
-                 img.GetData());
-  }
-
-  CheckGLError();
-}
-
-void TestGLContext::DrawRotatedCube(
-  float xangle, float yangle, float xtranslate, float ytranslate, float length)
-{
-  auto size = length / 2;
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
-  glTranslatef(xtranslate, ytranslate, -2.0f);
-  glRotatef(xangle, 1.0f, 0.0f, 0.0f);
-  glRotatef(yangle, 0.0f, 1.0f, 0.0f);
-
-  // Draw the 6 faces of a cube.
-  glBindTexture(GL_TEXTURE_2D, m_textures[0]);
-  glBegin(GL_QUADS);
-  glNormal3f(0.0f, 0.0f, 1.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(size, size, size);
-  glTexCoord2f(1, 0);
-  glVertex3f(-size, size, size);
-  glTexCoord2f(1, 1);
-  glVertex3f(-size, -size, size);
-  glTexCoord2f(0, 1);
-  glVertex3f(size, -size, size);
-  glEnd();
-
-  glBindTexture(GL_TEXTURE_2D, m_textures[1]);
-  glBegin(GL_QUADS);
-  glNormal3f(0.0f, 0.0f, -1.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(-size, -size, -size);
-  glTexCoord2f(1, 0);
-  glVertex3f(-size, size, -size);
-  glTexCoord2f(1, 1);
-  glVertex3f(size, size, -size);
-  glTexCoord2f(0, 1);
-  glVertex3f(size, -size, -size);
-  glEnd();
-
-  glBindTexture(GL_TEXTURE_2D, m_textures[2]);
-  glBegin(GL_QUADS);
-  glNormal3f(0.0f, 1.0f, 0.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(size, size, size);
-  glTexCoord2f(1, 0);
-  glVertex3f(size, size, -size);
-  glTexCoord2f(1, 1);
-  glVertex3f(-size, size, -size);
-  glTexCoord2f(0, 1);
-  glVertex3f(-size, size, size);
-  glEnd();
-
-  glBindTexture(GL_TEXTURE_2D, m_textures[3]);
-  glBegin(GL_QUADS);
-  glNormal3f(0.0f, -1.0f, 0.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(-size, -size, -size);
-  glTexCoord2f(1, 0);
-  glVertex3f(size, -size, -size);
-  glTexCoord2f(1, 1);
-  glVertex3f(size, -size, size);
-  glTexCoord2f(0, 1);
-  glVertex3f(-size, -size, size);
-  glEnd();
-
-  glBindTexture(GL_TEXTURE_2D, m_textures[4]);
-  glBegin(GL_QUADS);
-  glNormal3f(1.0f, 0.0f, 0.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(size, size, size);
-  glTexCoord2f(1, 0);
-  glVertex3f(size, -size, size);
-  glTexCoord2f(1, 1);
-  glVertex3f(size, -size, -size);
-  glTexCoord2f(0, 1);
-  glVertex3f(size, size, -size);
-  glEnd();
-
-  glBindTexture(GL_TEXTURE_2D, m_textures[5]);
-  glBegin(GL_QUADS);
-  glNormal3f(-1.0f, 0.0f, 0.0f);
-  glTexCoord2f(0, 0);
-  glVertex3f(-size, -size, -size);
-  glTexCoord2f(1, 0);
-  glVertex3f(-size, -size, size);
-  glTexCoord2f(1, 1);
-  glVertex3f(-size, size, size);
-  glTexCoord2f(0, 1);
-  glVertex3f(-size, size, -size);
-  glEnd();
-
-  glFlush();
-
-  CheckGLError();
-}
-
-// ----------------------------------------------------------------------------
-// TestGLCanvas
-// ----------------------------------------------------------------------------
-
-BEGIN_EVENT_TABLE(TestGLCanvas, wxGLCanvas) EVT_PAINT(TestGLCanvas::OnPaint)
-  EVT_KEY_DOWN(TestGLCanvas::OnKeyDown)
-  EVT_TIMER(SpinTimer, TestGLCanvas::OnSpinTimer) END_EVENT_TABLE()
-
-  TestGLCanvas::TestGLCanvas(wxWindow* parent, wxSize size, int* attribList)
+  GameLoopCanvas::GameLoopCanvas(wxWindow* parent, wxSize size, int* attribList)
   : wxGLCanvas(parent,
                wxID_ANY,
                attribList,
                wxDefaultPosition,
                size,
                wxFULL_REPAINT_ON_RESIZE)
-  , m_xangle(30.0)
-  , m_yangle(30.0)
-  , m_spinTimer(this, SpinTimer)
+  , m_spinTimer(this, GameTimer)
 {
+  GameInit();
+}
+
+GameLoopCanvas::~GameLoopCanvas()
+{
+  delete chunk_manager;
+}
+
+void GameLoopCanvas::GenerateBlocks(ChunkManager* cm)
+{
+  // Just an example of how to use the ChunkManager
+  auto noise2d = [](int x, int y, int amplitude, int height)
+  {
+    return (height + amplitude * glm::simplex(glm::vec2(x, y)));
+  };
+
+  for (int i = 0; i < cm->BOUNDX / 5; i++)
+  {
+    for (int j = 0; j < cm->BOUNDY / 5; j++)
+    {
+      BlockType type;
+      auto branchOn = rand() % 11;
+      if (branchOn < 1)
+      {
+        type = BlockType::Ground;
+      }
+      else if (branchOn < 2)
+      {
+        type = BlockType::Water;
+      }
+      else if (branchOn < 3)
+      {
+        type = BlockType::Sand;
+      }
+      else if (branchOn < 4)
+      {
+        type = BlockType::Wood;
+      }
+      else if (branchOn < 5)
+      {
+        type = BlockType::Flowers;
+      }
+      else if (branchOn < 6)
+      {
+        type = BlockType::Ruby;
+      }
+      else if (branchOn < 7)
+      {
+        type = BlockType::Leaves;
+      }
+      else if (branchOn < 8)
+      {
+        type = BlockType::Stone;
+      }
+      else if (branchOn < 9)
+      {
+        type = BlockType::Grass;
+      }
+      else if (branchOn < 10)
+      {
+        type = BlockType::Brick;
+      }
+      else
+      {
+        type = BlockType::Party;
+      }
+
+      int height = noise2d(i, j, 8, 32);
+      for (int k = height; k >= 0; k--)
+      {
+        cm->set(i, k, j, type);
+      }
+    }
+  }
+}
+
+void GameLoopCanvas::GameInit()
+{
+  m_spinTimer.Start(100); // in milliseconds.
+  chunk_manager = new ChunkManager();
+
+  GenerateBlocks(chunk_manager);
+  moves = {std::make_pair(Direction::FORWARD, false),
+           std::make_pair(Direction::BACKWARD, false),
+           std::make_pair(Direction::UP, false),
+           std::make_pair(Direction::DOWN, false),
+           std::make_pair(Direction::RIGHT, false),
+           std::make_pair(Direction::LEFT, false)};
+  position = glm::vec3(3, chunk_manager->BOUNDY / 4, 3);
+  player_angle = glm::vec3(0, -0.5, 0);
+  up = glm::vec3(0, 1, 0);
+  VectorUpdate(player_angle);
+  steal_mouse = true;
+  mouse_changed = false;
 }
 
 // Needed to use wxGetApp(). Usually you get the same result
 // by using wxIMPLEMENT_APP(), but that can only be in main.
 DECLARE_APP(MyApp);
 
-void TestGLCanvas::OnPaint(wxPaintEvent& WXUNUSED(event))
+void GameLoopCanvas::OnPaint(wxPaintEvent& WXUNUSED(event))
 {
   // This is required even though dc is not used otherwise.
   wxPaintDC dc(this);
-
-  // With perspective OpenGL graphics, the wxFULL_REPAINT_ON_RESIZE style
-  // flag should always be set, because even making the canvas smaller should
-  // be followed by a paint event that updates the entire canvas with new
-  // viewport settings.
-  Resize();
-
-  LOG(DEBUG) << "painting";
-
-  // Clear screen.
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  // Render the graphics and swap the buffers.
-  TestGLContext& canvas = wxGetApp().GetContext(this);
-  canvas.DrawRotatedCube(m_xangle, m_yangle, 0.1f, -0.2f, 0.5f);
-  canvas.DrawRotatedCube(m_xangle, m_yangle, -0.5f, 0.3f, 0.5f);
-  SwapBuffers();
+  Render();
 }
 
-void TestGLCanvas::Resize()
+void GameLoopCanvas::Resize()
 {
-  const wxSize ClientSize = GetClientSize();
+  auto ClientSize = GetClientSize();
   glViewport(0, 0, ClientSize.x, ClientSize.y);
 }
 
-void TestGLCanvas::Spin(float xSpin, float ySpin)
+void GameLoopCanvas::OnKeyDown(wxKeyEvent& event)
 {
-  m_xangle += xSpin;
-  m_yangle += ySpin;
-
-  Refresh(false);
-}
-
-void TestGLCanvas::OnKeyDown(wxKeyEvent& event)
-{
-  LOG(DEBUG) << "TestGLCanvas::" << __FUNCTION__;
-  float angle = 5.0;
+  LOG(DEBUG) << "GameLoopCanvas::" << __FUNCTION__;
 
   switch (event.GetKeyCode())
   {
   case WXK_RIGHT:
-    Spin(0.0, -angle);
+  case 'D':
+    moves[Direction::RIGHT] = true;
     break;
 
   case WXK_LEFT:
-    Spin(0.0, angle);
-    break;
-
-  case WXK_DOWN:
-    Spin(-angle, 0.0);
+  case 'A':
+    moves[Direction::LEFT] = true;
     break;
 
   case WXK_UP:
-    Spin(angle, 0.0);
+  case 'W':
+    moves[Direction::FORWARD] = true;
     break;
 
-  case WXK_SPACE:
-    if (m_spinTimer.IsRunning())
-      m_spinTimer.Stop();
-    else
-      m_spinTimer.Start(25);
+  case WXK_DOWN:
+  case 'S':
+    moves[Direction::BACKWARD] = true;
+    break;
+
+  case 'K':
+    moves[Direction::UP] = true;
+    break;
+
+  case 'J':
+    moves[Direction::DOWN] = true;
+    break;
+
+  case WXK_ESCAPE:
+    // Toggle stealing the mouse.
+    steal_mouse = (steal_mouse) ? false : true;
     break;
 
   default:
@@ -317,7 +183,161 @@ void TestGLCanvas::OnKeyDown(wxKeyEvent& event)
   }
 }
 
-void TestGLCanvas::OnSpinTimer(wxTimerEvent& WXUNUSED(event))
+void GameLoopCanvas::OnKeyUp(wxKeyEvent& event)
 {
-  Spin(0.0, 4.0);
+  switch (event.GetKeyCode())
+  {
+  case WXK_RIGHT:
+  case 'D':
+    moves[Direction::RIGHT] = false;
+    break;
+
+  case WXK_LEFT:
+  case 'A':
+    moves[Direction::LEFT] = false;
+    break;
+
+  case WXK_UP:
+  case 'W':
+    moves[Direction::FORWARD] = false;
+    break;
+
+  case WXK_DOWN:
+  case 'S':
+    moves[Direction::BACKWARD] = false;
+    break;
+
+  case 'K':
+    moves[Direction::UP] = false;
+    break;
+
+  case 'J':
+    moves[Direction::DOWN] = false;
+    break;
+
+  default:
+    event.Skip();
+    return;
+  }
+}
+
+void GameLoopCanvas::OnGameTimer(wxTimerEvent& WXUNUSED(event))
+{
+  Update();
+  Render();
+}
+
+void GameLoopCanvas::Render()
+{
+  // With perspective OpenGL graphics, the wxFULL_REPAINT_ON_RESIZE style
+  // flag should always be set, because even making the canvas smaller should
+  // be followed by a paint event that updates the entire canvas with new
+  // viewport settings.
+  Resize();
+
+  // Clear screen.
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  // The context contains all the graphics utils.
+  GraphicsContext& context = wxGetApp().GetContext(this);
+
+  auto Projection = glm::perspective(45.0f, 4.0f / 3.0f, 0.1f, 100.0f);
+
+  // Camera matrix
+  auto View = glm::lookAt(position, position + lookat, up);
+  // Just generate our view and projection; the model will be chosen
+  // by individual chunks.
+  auto VP = Projection * View;
+
+  chunk_manager->render(context, VP);
+
+  SwapBuffers();
+}
+
+void GameLoopCanvas::Update()
+{
+  VectorUpdate(player_angle);
+  chunk_manager->update();
+}
+
+void GameLoopCanvas::VectorUpdate(glm::vec3 angle)
+{
+
+  // We want the forward and right vectors to be updated based on
+  // where the player is rotated.
+  forward.x = sinf(angle.x);
+  forward.y = 0;
+  forward.z = cosf(angle.x);
+
+  right.x = -cosf(angle.x);
+  right.y = 0;
+  right.z = sinf(angle.x);
+
+  lookat.x = sinf(angle.x) * cosf(angle.y);
+  lookat.y = sinf(angle.y);
+  lookat.z = cosf(angle.x) * cosf(angle.y);
+
+  for (const auto& move : moves)
+  {
+    if (move.second)
+    {
+      switch (move.first)
+      {
+      case Direction::RIGHT:
+        position += right * player_speed;
+        break;
+      case Direction::LEFT:
+        position -= right * player_speed;
+        break;
+      case Direction::FORWARD:
+        position += forward * player_speed;
+        break;
+      case Direction::BACKWARD:
+        position -= forward * player_speed;
+        break;
+      case Direction::UP:
+        position += up * player_speed;
+        break;
+      case Direction::DOWN:
+        position -= up * player_speed;
+        break;
+      }
+    }
+  }
+}
+
+void GameLoopCanvas::OnMouseUpdate(wxMouseEvent& event)
+{
+  if (steal_mouse)
+  {
+    // Ignore every other mouse event so the mouse has a chance to
+    // change before being warped to the center.
+    if (mouse_changed)
+    {
+      mouse_changed = false;
+      auto x = event.GetPosition().x;
+      auto y = event.GetPosition().y;
+      auto size = GetSize();
+
+      // Update the angle the player is facing.
+      player_angle.x -= (x - (size.x / 2)) * 0.001;
+      player_angle.y -= (y - (size.y / 2)) * 0.001;
+
+      // Check if the x angle has gone full circle.
+      player_angle.x += (player_angle.x < -M_PI) ? 2 * M_PI : 0;
+      player_angle.x -= (player_angle.x > M_PI) ? 2 * M_PI : 0;
+
+      // Stop the y angle from going over 90 degrees away from the
+      // horizontal.
+      player_angle.y =
+        (player_angle.y < -M_PI / 2) ? -M_PI / 2 : player_angle.y;
+      player_angle.y = (player_angle.y > M_PI / 2) ? M_PI / 2 : player_angle.y;
+
+      WarpPointer(size.x / 2, size.y / 2);
+    }
+    else
+    {
+      mouse_changed = true;
+    }
+  }
 }

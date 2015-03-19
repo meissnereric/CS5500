@@ -1,7 +1,5 @@
 #include <vector>
-
 #include "logger.h"
-
 #include "MainWindow.h"
 #include "canvas.h"
 #include "itemgen.h"
@@ -42,9 +40,9 @@ BEGIN_EVENT_TABLE(MainWindow, wxFrame) EVT_MENU(ID_Help, MainWindow::OnHelp)
 
   wxMenu* menuTools = new wxMenu;
   menuTools->Append(ID_Inventory, wxT("&Inventory...\tCtrl-I"));
-  menuTools->Append(ID_Dungeon, wxT("&Dungeon...\tCtrl-d"));
-  menuTools->Append(ID_World, wxT("&World...\tCtrl-w"));
-  menuTools->Append(ID_Cubes, wxT("&Cubes...\tCtrl-c"));
+  menuTools->Append(ID_Dungeon, wxT("&Dungeon...\tCtrl-g"));
+  menuTools->Append(ID_World, wxT("&Map...\tCtrl-m"));
+  menuTools->Append(ID_Cubes, wxT("&Voxels...\tCtrl-v"));
 
   wxMenuBar* menuBar = new wxMenuBar;
   menuBar->Append(menuFile, wxT("&File"));
@@ -52,17 +50,19 @@ BEGIN_EVENT_TABLE(MainWindow, wxFrame) EVT_MENU(ID_Help, MainWindow::OnHelp)
   menuBar->Append(menuTools, wxT("&Tools"));
   SetMenuBar(menuBar);
   CreateStatusBar();
-  SetStatusText(wxT("Welcome to Torus World!"));
+  SetStatusText(
+    wxT("WASD keys to move, JK to go up and down, ESC to toggle mouse."));
 
   SetClientSize(600, 600);
-  testCanvas.reset(new TestGLCanvas(this, GetClientSize(), NULL));
+  int lpAttribList[] = {WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 1, 0};
+  gameCanvas.reset(new GameLoopCanvas(this, GetClientSize(), lpAttribList));
 
   // world setup
   sizer = new wxBoxSizer(wxHORIZONTAL);
 
   gridPane.reset(new GridPane(this));
   sizer->Add(gridPane.get(), 1, wxEXPAND);
-  sizer->Add(testCanvas.get(), 1, wxEXPAND);
+  sizer->Add(gameCanvas.get(), 1, wxEXPAND);
 
   SetSizer(sizer);
   SetAutoLayout(true);
@@ -113,7 +113,7 @@ void MainWindow::OnDungeonTest(wxCommandEvent&)
 void MainWindow::OnDisplayWorld(wxCommandEvent&)
 {
   LOG(DEBUG) << "Showing world";
-  testCanvas->Hide();
+  gameCanvas->Hide();
   gridPane->Show();
   gridPane->SetFocus();
   sizer->RecalcSizes();
@@ -123,8 +123,8 @@ void MainWindow::OnDisplayCubes(wxCommandEvent&)
 {
   LOG(DEBUG) << "Showing cubes";
   gridPane->Hide();
-  testCanvas->Show();
-  testCanvas->SetFocus();
+  gameCanvas->Show();
+  gameCanvas->SetFocus();
   sizer->RecalcSizes();
   Refresh();
 }

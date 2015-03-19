@@ -27,10 +27,8 @@ public:
   static void makeDungeon(ChunkList& list);
   // Indexes 256 x 256 x 256 dungeon for active blocks.
   static bool isBlockActive(const ChunkList& list, int x, int y, int z);
-  static float distanceBetween(Vector3 a, Vector3 b);
   static int dungeonBlockLength();
   static void printDungeon(ChunkList& list);
-  static Vector3 chunkToBlockDistance(Vector3 incoming);
   static const int DUNGEON_SIZE = 16;
 
 private:
@@ -43,5 +41,4 @@ private:
   static void createRoom(std::shared_ptr<Chunk> chunkList);
   static bool isChunkAllActive(std::shared_ptr<Chunk> chunk);
   static bool isChunkAnyActive(std::shared_ptr<Chunk> chunk);
-  static void createMaze(ChunkList& env, const ChunkList& toConnect);
 };

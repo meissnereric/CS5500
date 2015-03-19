@@ -2,7 +2,7 @@
 #define _MAINWINDOW_H_
 
 #include "wxwidget.h"
-#include "canvas.h"
+#include "graphics.h"
 #include "GridPane.h"
 
 class MainWindow : public wxFrame
@@ -21,7 +21,7 @@ private:
 
   DECLARE_EVENT_TABLE();
 
-  std::shared_ptr<TestGLCanvas> testCanvas;
+  std::shared_ptr<wxGLCanvas> gameCanvas;
   std::shared_ptr<GridPane> gridPane;
   wxBoxSizer* sizer;
 };

@@ -8,10 +8,7 @@ bool MyApp::OnInit()
   init_log();
   LOG(INFO) << "Initializing";
 
-  frame.reset(
-    new MainWindow(wxT("Hello World"), wxPoint(50, 50), wxSize(300, 400)));
-  manager.reset(new ChunkManager());
-
+  frame = new MainWindow(wxT("Hello World"), wxPoint(50, 50), wxSize(300, 400));
   return true;
 }
 
@@ -21,14 +18,14 @@ int MyApp::OnExit()
   return wxApp::OnExit();
 }
 
-TestGLContext& MyApp::GetContext(wxGLCanvas* canvas)
+GraphicsContext& MyApp::GetContext(wxGLCanvas* canvas)
 {
-  TestGLContext* glContext;
+  GraphicsContext* glContext;
   if (!m_glContext)
   {
     // Create the OpenGL context for the first mono window which needs it:
     // subsequently created windows will all share the same context.
-    m_glContext = new TestGLContext(canvas);
+    m_glContext = new GraphicsContext(canvas);
   }
   glContext = m_glContext;
 

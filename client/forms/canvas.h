@@ -1,41 +1,55 @@
 #ifndef _CANVAS_HEADER_
 #define _CANVAS_HEADER_
-#include "wxwidget.h"
-#include <wx/glcanvas.h>
+#include <wxwidget.h>
+#include <map>
+#include "main.h"
+#include "chunkmanager.h"
 
-class TestGLCanvas : public wxGLCanvas
+enum class Direction
+{
+  UP,
+  DOWN,
+  LEFT,
+  RIGHT,
+  FORWARD,
+  BACKWARD
+};
+
+class GameLoopCanvas : public wxGLCanvas
 {
 public:
-  TestGLCanvas(wxWindow* parent, wxSize size, int* attribList = NULL);
+  GameLoopCanvas(wxWindow* parent, wxSize size, int* attribList = NULL);
+  ~GameLoopCanvas();
 
 private:
   void OnPaint(wxPaintEvent& event);
   void Resize();
   void Spin(float xSpin, float ySpin);
   void OnKeyDown(wxKeyEvent& event);
-  void OnSpinTimer(wxTimerEvent& WXUNUSED(event));
+  void OnKeyUp(wxKeyEvent& event);
+  void OnGameTimer(wxTimerEvent& WXUNUSED(event));
+  void Render();
+  void Update();
+  void GameInit();
+  void GenerateBlocks(ChunkManager* cm);
+  void VectorUpdate(glm::vec3 angle);
+  void OnMouseUpdate(wxMouseEvent& event);
 
   // angles of rotation around x- and y- axis
-  float m_xangle, m_yangle;
-
+  const float player_speed = 0.7;
+  bool steal_mouse;
+  bool mouse_changed;
   wxTimer m_spinTimer;
+  ChunkManager* chunk_manager;
+  glm::vec3 position;
+  glm::vec3 forward;
+  glm::vec3 right;
+  glm::vec3 up;
+  glm::vec3 lookat;
+  glm::vec3 player_angle;
+  std::map<Direction, bool> moves;
 
   DECLARE_EVENT_TABLE();
-};
-
-// the rendering context used by all GL canvases
-class TestGLContext : public wxGLContext
-{
-public:
-  TestGLContext(wxGLCanvas* canvas);
-
-  // render the cube showing it at given angles
-  void DrawRotatedCube(
-    float xangle, float yangle, float xtranslate, float ytranslate, float size);
-
-private:
-  // textures for the cube faces
-  GLuint m_textures[6];
 };
 
 #endif
