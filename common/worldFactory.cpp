@@ -1,9 +1,11 @@
 #include "worldFactory.h"
 
-WorldFactory::WorldFactory(int tempMinElevation, int tempMaxElevation)
+WorldFactory::WorldFactory(int minElevation, int maxElevation, int noiseDepth)
 {
-  minElevation = tempMinElevation;
-  maxElevation = tempMaxElevation;
+  this.minElevation = minElevation;
+  this.maxElevation = maxElevation;
+  noise = PerlinNoise();
+  this.noiseDepth = noiseDepth;
 }
 
 int WorldFactory::getMinElevation() const
@@ -16,8 +18,15 @@ int WorldFactory::getMaxElevation() const
   return maxElevation;
 }
 
-int WorldFactory::elevation(int x, int y, PerlinNoise noise, int noiseDepth)
+int WorldFactory::elevation(Vector3 v)
 {
-  double weight = noise.turbulence2D(x, y, noiseDepth);
+  double weight = noise.turbulence2D(v.x, v.y, noiseDepth);
   return minElevation * (1 - weight) + maxElevation * weight;
+}
+
+Blocktype computeBlockType(Vector3 globalXYZ){
+   if(globalXYZ.z <= elevation(globalXYZ))
+       return Blocktype::Inactive;
+   else //Compute Biome/etc here
+       return Blocktype::Stone;
 }

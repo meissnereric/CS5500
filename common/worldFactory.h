@@ -2,17 +2,22 @@
 #define WorldFactory_h
 
 #include "noise/PerlinNoise.h"
+#include "voxel/block.h"
+#include "vector3.h"
 
 // thread unsafe
 class WorldFactory
 {
 public:
-  WorldFactory(int, int);
+  WorldFactory(int, int, int);
   int getMinElevation() const;
   int getMaxElevation() const;
-  int elevation(int x, int y, PerlinNoise noise, int noiseDepth);
+  int elevation(Vector3 v);
+  Blocktype computeBlockType(Vector3 globalXYZ);
 
 private:
   int minElevation, maxElevation;
+  PerlinNoise noise;
+  int noiseDepth;
 };
 #endif
