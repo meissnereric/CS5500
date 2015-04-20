@@ -16,21 +16,21 @@ enum
 
 BEGIN_EVENT_TABLE(MainWindow, wxFrame) EVT_MENU(ID_Help, MainWindow::OnHelp)
   EVT_MENU(wxID_EXIT, MainWindow::OnExit)
-  EVT_MENU(wxID_ABOUT, MainWindow::OnAbout)
-  EVT_MENU(ID_Inventory, MainWindow::OnInventory)
-  EVT_MENU(ID_Dungeon, MainWindow::OnDungeonTest)
-  EVT_MENU(ID_World, MainWindow::OnDisplayWorld)
-  EVT_MENU(ID_Cubes, MainWindow::OnDisplayCubes) END_EVENT_TABLE()
+    EVT_MENU(wxID_ABOUT, MainWindow::OnAbout)
+      EVT_MENU(ID_Inventory, MainWindow::OnInventory)
+        EVT_MENU(ID_Dungeon, MainWindow::OnDungeonTest)
+          EVT_MENU(ID_World, MainWindow::OnDisplayWorld)
+            EVT_MENU(ID_Cubes, MainWindow::OnDisplayCubes) END_EVENT_TABLE()
 
-  MainWindow::MainWindow(const wxString& title,
-                         const wxPoint& pos,
-                         const wxSize& size)
+              MainWindow::MainWindow(const wxString& title,
+                                     std::shared_ptr<World> world,
+                                     const wxPoint& pos,
+                                     const wxSize& size)
   : wxFrame(NULL, wxID_ANY, title, pos, size)
 {
   LOG(DEBUG) << "Creating main window";
   wxMenu* menuFile = new wxMenu;
-  menuFile->Append(ID_Help,
-                   wxT("&Help...\tCtrl-H"),
+  menuFile->Append(ID_Help, wxT("&Help...\tCtrl-H"),
                    wxT("Help string shown in status bar for this menu item"));
   menuFile->AppendSeparator();
   menuFile->Append(wxID_EXIT);
@@ -51,17 +51,18 @@ BEGIN_EVENT_TABLE(MainWindow, wxFrame) EVT_MENU(ID_Help, MainWindow::OnHelp)
   SetMenuBar(menuBar);
   CreateStatusBar();
   SetStatusText(
-    wxT("WASD keys to move, JK to go up and down, ESC to toggle mouse."));
+    wxT("WASD keys to move, Space/Shift to go up/down, ESC to toggle mouse."));
 
   SetClientSize(600, 600);
   int lpAttribList[] = {WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 1, 0};
-  gameCanvas.reset(new GameLoopCanvas(this, GetClientSize(), lpAttribList));
+  gameCanvas = std::make_shared<GameLoopCanvas>(
+    this, world, GetClientSize(), lpAttribList);
 
   // world setup
   sizer = new wxBoxSizer(wxHORIZONTAL);
 
-  gridPane.reset(new GridPane(this));
-  sizer->Add(gridPane.get(), 1, wxEXPAND);
+  gridPane = new GridPane(this);
+  sizer->Add(gridPane, 1, wxEXPAND);
   sizer->Add(gameCanvas.get(), 1, wxEXPAND);
 
   SetSizer(sizer);
@@ -81,8 +82,7 @@ void MainWindow::OnAbout(wxCommandEvent&)
 {
   LOG(DEBUG) << "About dialog prompt";
   wxMessageBox(wxT("This is an awesome project with a torus world"),
-               wxT("About Torus World"),
-               wxOK | wxICON_INFORMATION);
+               wxT("About Torus World"), wxOK | wxICON_INFORMATION);
 }
 
 void MainWindow::OnHelp(wxCommandEvent&)

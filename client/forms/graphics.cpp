@@ -140,6 +140,8 @@ void GraphicsContext::initRendering()
   // set up the parameters we want to use
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_CULL_FACE);
+  glEnable(GL_TEXTURE_2D);
+  glEnable(GL_BLEND);
 
   // Inititialize GLEW.
   if (glewInit() != GLEW_OK)
@@ -162,14 +164,8 @@ void GraphicsContext::initRendering()
   glActiveTexture(GL_TEXTURE0);
   glGenTextures(1, &texture);
   glBindTexture(GL_TEXTURE_2D, texture);
-  glTexImage2D(GL_TEXTURE_2D,
-               0,
-               GL_RGBA,
-               Texture::atlas.width,
-               Texture::atlas.height,
-               0,
-               GL_RGBA,
-               GL_UNSIGNED_BYTE,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Texture::atlas.width,
+               Texture::atlas.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                Texture::atlas.pixel_data);
   glGenerateMipmap(GL_TEXTURE_2D);
 }

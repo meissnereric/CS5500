@@ -15,19 +15,25 @@ public:
   BlockType get(int x, int y, int z);
   void set(int x, int y, int z, BlockType type);
   glm::vec3 getPosition();
-  void update();
+  void update(std::shared_ptr<Chunk> down,
+              std::shared_ptr<Chunk> up,
+              std::shared_ptr<Chunk> left,
+              std::shared_ptr<Chunk> right,
+              std::shared_ptr<Chunk> back,
+              std::shared_ptr<Chunk> front);
+
   void render(GraphicsContext& context);
 
   static const int CHUNK_SIZE = 16;
 
-  const int X; // World Chunk Position;
-  const int Y; // World Chunk Position;
-  const int Z; // World Chunk Position;
+  const float X; // World Chunk Position;
+  const float Y; // World Chunk Position;
+  const float Z; // World Chunk Position;
 private:
   // The blocks data
   BlockType*** mBlocks;
-  int vertex_count;
   GLuint vertex_buffer;
+  std::vector<byte4> vertices;
 };
 
 #endif

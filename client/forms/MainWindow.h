@@ -4,11 +4,15 @@
 #include "wxwidget.h"
 #include "graphics.h"
 #include "GridPane.h"
+#include "world.h"
 
 class MainWindow : public wxFrame
 {
 public:
-  MainWindow(const wxString& title, const wxPoint& pos, const wxSize& size);
+  MainWindow(const wxString& title,
+             std::shared_ptr<World> world,
+             const wxPoint& pos,
+             const wxSize& size);
 
 private:
   void OnHelp(wxCommandEvent& event);
@@ -22,7 +26,7 @@ private:
   DECLARE_EVENT_TABLE();
 
   std::shared_ptr<wxGLCanvas> gameCanvas;
-  std::shared_ptr<GridPane> gridPane;
+  GridPane* gridPane;
   wxBoxSizer* sizer;
 };
 
